@@ -758,6 +758,7 @@ menu_principal() {
         echo -e "  ${W}[4]${NC} SSL/TLS Stunnel"
         echo -e "  ${W}[5]${NC} V2Ray VMess"
         echo -e "  ${W}[6]${NC} ZIV VPN / Hysteria2"
+        echo -e "  ${W}[7]${NC} Gestión de Usuarios"
         echo ""
         sep
         echo -e "  ${W}[0]${NC} Salir"
@@ -771,6 +772,7 @@ menu_principal() {
             4) menu_ssl ;;
             5) menu_v2ray ;;
             6) menu_ziv ;;
+            7) menu_usuarios ;;
             0) echo -e "\n  ${G}Hasta luego! — DarkZFull${NC}\n"; exit 0 ;;
             *) echo -e "  ${R}Opcion invalida${NC}"; sleep 1 ;;
         esac
@@ -784,3 +786,220 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 menu_principal
+
+# ══════════════════════════════════════════
+#   GESTIÓN DE USUARIOS
+# ══════════════════════════════════════════
+
+crear_usuario() {
+    banner
+    sep
+    echo -e "  ${Y}  CREAR USUARIO${NC}"
+    sep
+    echo ""
+
+    # Datos del usuario
+    read -p "  Nombre de usuario: " USR_NAME
+    if [ -z "$USR_NAME" ]; then
+        echo -e "  ${R}Nombre requerido${NC}"; sleep 1; return
+    fi
+
+    read -p "  Contraseña (ENTER para generar): " USR_PASS
+    if [ -z "$USR_PASS" ]; then
+        USR_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)
+        echo -e "  ${G}Contraseña generada: ${USR_PASS}${NC}"
+    fi
+
+    read -p "  Dias de validez (default 30): " USR_DAYS
+    USR_DAYS=${USR_DAYS:-30}
+
+    # Calcular fecha de expiración
+    EXP_DATE=$(date -d "+${USR_DAYS} days" +%Y-%m-%d)
+    EXP_SHOW=$(date -d "+${USR_DAYS} days" +%d/%m/%Y)
+
+    # Obtener IP del servidor
+    SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+
+    echo ""
+    echo -e "  ${C}Creando usuario SSH...${NC}"
+
+    # Crear usuario SSH
+    if id "$USR_NAME" &>/dev/null; then
+        echo -e "  ${Y}Usuario ya existe, actualizando...${NC}"
+        usermod -e $EXP_DATE $USR_NAME
+        echo "$USR_NAME:$USR_PASS" | chpasswd
+    else
+        useradd -M -s /bin/false -e $EXP_DATE $USR_NAME
+        echo "$USR_NAME:$USR_PASS" | chpasswd
+        chage -E $EXP_DATE -M 99999 $USR_NAME
+        usermod -f 0 $USR_NAME
+    fi
+
+    echo -e "  ${G}✅ Usuario SSH creado${NC}"
+    echo ""
+
+    # Generar conexiones según puertos activos
+    sep
+    echo -e "  ${Y}  CREDENCIALES DE ACCESO${NC}"
+    sep
+    echo ""
+    echo -e "  ${W}Usuario:${NC}   $USR_NAME"
+    echo -e "  ${W}Password:${NC}  $USR_PASS"
+    echo -e "  ${W}Expira:${NC}    $EXP_SHOW ($USR_DAYS dias)"
+    echo -e "  ${W}IP:${NC}        $SERVER_IP"
+    echo ""
+    sep
+    echo -e "  ${Y}  CONFIGURACIONES DE CONEXION${NC}"
+    sep
+    echo ""
+
+    # SSH Directo (siempre)
+    echo -e "  ${C}SSH Directo:${NC}"
+    echo -e "  ${W}$SERVER_IP:22@$USR_NAME:$USR_PASS${NC}"
+    echo ""
+
+    # WebSocket Puerto 80 (si está activo)
+    if ss -tlnp | grep -q ":80 "; then
+        echo -e "  ${C}WebSocket Puerto 80:${NC}"
+        echo -e "  ${W}$SERVER_IP:80@$USR_NAME:$USR_PASS${NC}"
+        echo ""
+    fi
+
+    # SSL/TLS Puerto 443 (si está activo y es stunnel)
+    if ss -tlnp | grep -q ":443 " && systemctl is-active --quiet stunnel4 2>/dev/null; then
+        echo -e "  ${C}SSL/TLS Puerto 443:${NC}"
+        echo -e "  ${W}$SERVER_IP:443@$USR_NAME:$USR_PASS${NC}"
+        echo ""
+    fi
+
+    # UDP Custom (si está activo)
+    if ps aux | grep -i "udp-custom" | grep -v grep | grep -q .; then
+        UDP_PORT=$(ss -ulnp | grep udp-custom | grep -o ':[0-9]*' | head -1 | tr -d ':')
+        UDP_PORT=${UDP_PORT:-36712}
+        echo -e "  ${C}UDP Custom:${NC}"
+        echo -e "  ${W}$SERVER_IP:1-65535@$USR_NAME:$USR_PASS${NC}"
+        echo ""
+        # Crear usuario UDP Custom
+        echo -e "  ${C}Creando usuario UDP Custom...${NC}"
+        if [ -f /root/udp/udp-custom ]; then
+            /root/udp/udp-custom user add --name "$USR_NAME" --password "$USR_PASS" 2>/dev/null && \
+            echo -e "  ${G}✅ Usuario UDP Custom creado${NC}" || \
+            echo -e "  ${Y}UDP Custom no requiere usuarios separados${NC}"
+        fi
+        echo ""
+    fi
+
+    # BadVPN (si está activo)
+    if ss -tlnp | grep -q ":7200 "; then
+        echo -e "  ${C}BadVPN UDP Gateway:${NC}"
+        echo -e "  ${W}Puerto 7200 y 7300 activos${NC}"
+        echo ""
+    fi
+
+    sep
+    echo ""
+    read -p "  Presiona ENTER para continuar..."
+}
+
+listar_usuarios() {
+    banner
+    sep
+    echo -e "  ${Y}  USUARIOS ACTIVOS${NC}"
+    sep
+    echo ""
+    echo -e "  ${W}Usuario          Expira          Estado${NC}"
+    sep
+    # Listar usuarios del sistema que no son del sistema
+    awk -F: '$3>=1000 && $1!="nobody" {print $1}' /etc/passwd | while read user; do
+        EXP=$(chage -l $user 2>/dev/null | grep "Account expires" | cut -d: -f2 | xargs)
+        if [ "$EXP" = "never" ] || [ -z "$EXP" ]; then
+            EXP="Sin expirar"
+            COLOR=$Y
+        else
+            # Verificar si ya expiró
+            EXP_TS=$(date -d "$EXP" +%s 2>/dev/null || echo 0)
+            NOW_TS=$(date +%s)
+            if [ $EXP_TS -lt $NOW_TS ]; then
+                COLOR=$R
+                EXP="$EXP ${R}[EXPIRADO]${NC}"
+            else
+                COLOR=$G
+            fi
+        fi
+        printf "  ${COLOR}%-16s${NC} %-16s\n" "$user" "$EXP"
+    done
+    echo ""
+    sep
+    read -p "  Presiona ENTER para continuar..."
+}
+
+eliminar_usuario() {
+    banner
+    sep
+    echo -e "  ${R}  ELIMINAR USUARIO${NC}"
+    sep
+    echo ""
+    listar_usuarios
+    echo ""
+    read -p "  Usuario a eliminar: " DEL_USR
+    if id "$DEL_USR" &>/dev/null; then
+        pkill -u "$DEL_USR" 2>/dev/null
+        userdel -f "$DEL_USR" 2>/dev/null
+        # Eliminar de UDP Custom si aplica
+        /root/udp/udp-custom user del --name "$DEL_USR" 2>/dev/null
+        echo -e "  ${G}✅ Usuario $DEL_USR eliminado${NC}"
+    else
+        echo -e "  ${R}Usuario no encontrado${NC}"
+    fi
+    sleep 2
+}
+
+renovar_usuario() {
+    banner
+    sep
+    echo -e "  ${Y}  RENOVAR USUARIO${NC}"
+    sep
+    echo ""
+    listar_usuarios
+    echo ""
+    read -p "  Usuario a renovar: " REN_USR
+    if ! id "$REN_USR" &>/dev/null; then
+        echo -e "  ${R}Usuario no encontrado${NC}"; sleep 1; return
+    fi
+    read -p "  Dias a agregar (default 30): " REN_DAYS
+    REN_DAYS=${REN_DAYS:-30}
+    EXP_DATE=$(date -d "+${REN_DAYS} days" +%Y-%m-%d)
+    EXP_SHOW=$(date -d "+${REN_DAYS} days" +%d/%m/%Y)
+    usermod -e $EXP_DATE $REN_USR
+    chage -E $EXP_DATE $REN_USR
+    echo -e "  ${G}✅ Usuario $REN_USR renovado hasta $EXP_SHOW${NC}"
+    sleep 2
+}
+
+menu_usuarios() {
+    while true; do
+        banner
+        sep
+        echo -e "  ${Y}  GESTIÓN DE USUARIOS${NC}"
+        sep
+        echo ""
+        TOTAL=$(awk -F: '$3>=1000 && $1!="nobody" {print $1}' /etc/passwd | wc -l)
+        echo -e "  Total usuarios: ${G}${TOTAL}${NC}"
+        echo ""
+        sep
+        echo -e "  ${W}[1]${NC} Crear usuario"
+        echo -e "  ${W}[2]${NC} Listar usuarios"
+        echo -e "  ${W}[3]${NC} Eliminar usuario"
+        echo -e "  ${W}[4]${NC} Renovar usuario"
+        echo -e "  ${W}[0]${NC} Volver"
+        sep
+        read -p "  Opcion: " OPT
+        case $OPT in
+            1) crear_usuario ;;
+            2) listar_usuarios ;;
+            3) eliminar_usuario ;;
+            4) renovar_usuario ;;
+            0) break ;;
+        esac
+    done
+}
