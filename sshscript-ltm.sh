@@ -647,45 +647,50 @@ menu_ziv() {
     while true; do
         banner
         sep
-        echo -e "  ${Y}  ZIV VPN / HYSTERIA2${NC}"
+        echo -e "  ${Y}  ZIV VPN UDP${NC}"
         sep
         echo ""
-        echo -e "  Hysteria $(status_service hysteria-server)"
+        echo -e "  ZIV VPN $(status_service zivpn)"
+        if [ -f /etc/zivpn/config.json ]; then
+            PORT=$(cat /etc/zivpn/config.json | grep listen | grep -o '[0-9]*')
+            echo -e "  Puerto: ${Y}${PORT}${NC}"
+        fi
         echo ""
         sep
-        echo -e "  ${W}[1]${NC} Instalar Hysteria2"
-        echo -e "  ${W}[2]${NC} Iniciar"
-        echo -e "  ${W}[3]${NC} Detener"
-        echo -e "  ${W}[4]${NC} Ver configuración"
+        echo -e "  ${W}[1]${NC} Instalar ZIV VPN V2 (Recomendado)"
+        echo -e "  ${W}[2]${NC} Instalar ZIV VPN V1"
+        echo -e "  ${W}[3]${NC} Iniciar"
+        echo -e "  ${W}[4]${NC} Detener"
+        echo -e "  ${W}[5]${NC} Reiniciar"
+        echo -e "  ${W}[6]${NC} Ver configuracion"
+        echo -e "  ${W}[7]${NC} Desinstalar"
         echo -e "  ${W}[0]${NC} Volver"
         sep
         read -p "  Opcion: " OPT
         case $OPT in
             1)
-                bash <(curl -fsSL https://get.hy2.sh/) > /dev/null 2>&1
-                read -p "  Puerto UDP (ej: 36712): " HY_PORT
-                HY_PORT=${HY_PORT:-36712}
-                read -p "  Contraseña: " HY_PASS
-                mkdir -p /etc/hysteria
-                openssl req -x509 -newkey rsa:4096 -keyout /etc/hysteria/server.key \
-                    -out /etc/hysteria/server.crt -days 3650 -nodes \
-                    -subj "/CN=hysteria" 2>/dev/null
-                cat > /etc/hysteria/config.yaml << EOF
-listen: :${HY_PORT}
-auth:
-  type: password
-  password: ${HY_PASS}
-tls:
-  cert: /etc/hysteria/server.crt
-  key: /etc/hysteria/server.key
-EOF
-                systemctl enable hysteria-server
-                systemctl start hysteria-server
-                echo -e "  ${G}OK Hysteria2 en puerto UDP ${HY_PORT}${NC}"; sleep 2
+                echo -e "\n  ${C}Instalando ZIV VPN V2...${NC}"
+                bash <(curl -fsSL https://raw.githubusercontent.com/powermx/zivpn/main/ziv2.sh)
+                sleep 1
                 ;;
-            2) systemctl start hysteria-server && echo -e "  ${G}Iniciado${NC}"; sleep 1 ;;
-            3) systemctl stop hysteria-server && echo -e "  ${Y}Detenido${NC}"; sleep 1 ;;
-            4) cat /etc/hysteria/config.yaml 2>/dev/null; echo ""; read -p "  ENTER..." ;;
+            2)
+                echo -e "\n  ${C}Instalando ZIV VPN V1...${NC}"
+                bash <(curl -fsSL https://raw.githubusercontent.com/powermx/zivpn/main/ziv1.sh)
+                sleep 1
+                ;;
+            3) systemctl start zivpn && echo -e "  ${G}Iniciado${NC}"; sleep 1 ;;
+            4) systemctl stop zivpn && echo -e "  ${Y}Detenido${NC}"; sleep 1 ;;
+            5) systemctl restart zivpn && echo -e "  ${G}Reiniciado${NC}"; sleep 1 ;;
+            6)
+                echo ""
+                cat /etc/zivpn/config.json 2>/dev/null || echo -e "  ${R}No instalado${NC}"
+                echo ""
+                read -p "  ENTER..."
+                ;;
+            7)
+                bash <(curl -fsSL https://raw.githubusercontent.com/powermx/zivpn/main/uninstall.sh) 2>/dev/null
+                echo -e "  ${G}Desinstalado${NC}"; sleep 1
+                ;;
             0) break ;;
         esac
     done
@@ -900,7 +905,7 @@ menu_principal() {
         fi
         echo -e "  SSL/TLS Stunnel   $(status_service stunnel4)"
         echo -e "  V2Ray VMess       $(status_service v2ray)"
-        echo -e "  Hysteria/ZivVPN   $(status_service hysteria-server)"
+        echo -e "  ZIV VPN           $(status_service zivpn)"
         sep
         echo ""
         echo -e "  ${W}[1]${NC} WebSocket Python"
