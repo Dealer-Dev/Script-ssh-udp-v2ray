@@ -914,7 +914,8 @@ menu_principal() {
         echo -e "  ${W}[4]${NC} SSL/TLS Stunnel"
         echo -e "  ${W}[5]${NC} V2Ray VMess"
         echo -e "  ${W}[6]${NC} ZIV VPN / Hysteria2"
-        echo -e "  ${W}[7]${NC} Gestión de Usuarios"
+        echo -e "  ${W}[7]${NC} Gestión de Usuarios SSH"
+        echo -e "  ${W}[8]${NC} Usuarios ZIV VPN"
         echo ""
         sep
         echo -e "  ${W}[0]${NC} Salir"
@@ -929,6 +930,7 @@ menu_principal() {
             5) menu_v2ray ;;
             6) menu_ziv ;;
             7) menu_usuarios ;;
+            8) menu_users_ziv ;;
             0) echo -e "\n  ${G}Hasta luego! — DarkZFull${NC}\n"; exit 0 ;;
             *) echo -e "  ${R}Opcion invalida${NC}"; sleep 1 ;;
         esac
@@ -942,3 +944,154 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 menu_principal
+
+# ══════════════════════════════════════════
+#   USUARIOS ZIV VPN
+# ══════════════════════════════════════════
+
+ZIVPN_USERS="/etc/zivpn/users.json"
+
+aplicar_passwords_ziv() {
+    python3 - << PYEOF
+import json, datetime
+try:
+    with open("/etc/zivpn/users.json") as f: users = json.load(f)
+except: users = []
+now = datetime.datetime.now()
+active = [u["password"] for u in users if datetime.datetime.fromisoformat(u["expires"]) > now]
+if not active: active = ["zi"]
+with open("/etc/zivpn/config.json") as f: config = json.load(f)
+config["auth"]["config"] = active
+with open("/etc/zivpn/config.json", "w") as f: json.dump(config, f, indent=2)
+print("Passwords actualizadas:", active)
+PYEOF
+    systemctl restart zivpn 2>/dev/null
+}
+
+crear_user_ziv() {
+    banner
+    sep
+    echo -e "  ${Y}  CREAR USUARIO ZIV VPN${NC}"
+    sep
+    echo ""
+    read -p "  Contraseña: " ZIV_PASS
+    [ -z "$ZIV_PASS" ] && echo -e "  ${R}Contraseña requerida${NC}" && sleep 1 && return
+    read -p "  Dias de validez (default 30): " ZIV_DAYS
+    ZIV_DAYS=${ZIV_DAYS:-30}
+    EXP_DATE=$(date -d "+${ZIV_DAYS} days" -Iseconds)
+    EXP_SHOW=$(date -d "+${ZIV_DAYS} days" +"%d/%m/%Y")
+    SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
+    [ ! -f /etc/zivpn/users.json ] && echo "[]" > /etc/zivpn/users.json
+    python3 - << PYEOF
+import json, datetime
+with open("/etc/zivpn/users.json") as f: users = json.load(f)
+users.append({"password": "$ZIV_PASS", "expires": "$EXP_DATE", "created": datetime.datetime.now().isoformat()})
+with open("/etc/zivpn/users.json", "w") as f: json.dump(users, f, indent=2)
+print("OK")
+PYEOF
+    aplicar_passwords_ziv
+    echo ""
+    sep
+    echo -e "  ${Y}  CREDENCIALES ZIV VPN${NC}"
+    sep
+    echo -e "  ${W}IP:${NC}       $SERVER_IP"
+    echo -e "  ${W}Puerto:${NC}   5667"
+    echo -e "  ${W}Pass:${NC}     $ZIV_PASS"
+    echo -e "  ${W}Expira:${NC}   $EXP_SHOW ($ZIV_DAYS dias)"
+    echo ""
+    sep
+    read -p "  ENTER..."
+}
+
+listar_users_ziv() {
+    banner
+    sep
+    echo -e "  ${Y}  USUARIOS ZIV VPN${NC}"
+    sep
+    echo ""
+    python3 - << PYEOF
+import json, datetime
+try:
+    with open("/etc/zivpn/users.json") as f: users = json.load(f)
+except: users = []
+if not users:
+    print("  Sin usuarios")
+else:
+    now = datetime.datetime.now()
+    for u in users:
+        exp = datetime.datetime.fromisoformat(u["expires"])
+        estado = "\033[0;32m[ACTIVO]\033[0m" if exp > now else "\033[0;31m[EXPIRADO]\033[0m"
+        print(f"  Pass: {u['password']:<20} Expira: {exp.strftime('%d/%m/%Y')}  {estado}")
+PYEOF
+    echo ""
+    read -p "  ENTER..."
+}
+
+eliminar_user_ziv() {
+    banner
+    sep
+    echo -e "  ${R}  ELIMINAR USUARIO ZIV VPN${NC}"
+    sep
+    echo ""
+    python3 -c "
+import json
+try:
+    with open('/etc/zivpn/users.json') as f: u=json.load(f)
+    [print(f'  - {x[\"password\"]}') for x in u]
+except: print('  Sin usuarios')
+"
+    echo ""
+    read -p "  Contraseña a eliminar: " DEL_PASS
+    python3 - << PYEOF
+import json
+with open("/etc/zivpn/users.json") as f: users = json.load(f)
+users = [u for u in users if u["password"] != "$DEL_PASS"]
+with open("/etc/zivpn/users.json", "w") as f: json.dump(users, f, indent=2)
+print("OK")
+PYEOF
+    aplicar_passwords_ziv
+    echo -e "  ${G}Eliminado${NC}"; sleep 1
+}
+
+limpiar_expirados_ziv() {
+    python3 - << PYEOF
+import json, datetime
+try:
+    with open("/etc/zivpn/users.json") as f: users = json.load(f)
+    now = datetime.datetime.now()
+    activos = [u for u in users if datetime.datetime.fromisoformat(u["expires"]) > now]
+    exp = len(users) - len(activos)
+    with open("/etc/zivpn/users.json", "w") as f: json.dump(activos, f, indent=2)
+    print(f"  {exp} expirados eliminados" if exp > 0 else "  Sin expirados")
+except Exception as e: print(f"Error: {e}")
+PYEOF
+}
+
+menu_users_ziv() {
+    while true; do
+        banner
+        sep
+        echo -e "  ${Y}  USUARIOS ZIV VPN${NC}"
+        sep
+        echo ""
+        TOTAL=$(python3 -c "import json; f=open('/etc/zivpn/users.json'); print(len(json.load(f)))" 2>/dev/null || echo 0)
+        echo -e "  Total usuarios: ${G}${TOTAL}${NC}"
+        echo -e "  ZIV VPN: $(status_service zivpn)"
+        echo ""
+        sep
+        echo -e "  ${W}[1]${NC} Crear usuario"
+        echo -e "  ${W}[2]${NC} Listar usuarios"
+        echo -e "  ${W}[3]${NC} Eliminar usuario"
+        echo -e "  ${W}[4]${NC} Limpiar expirados"
+        echo -e "  ${W}[0]${NC} Volver"
+        sep
+        read -p "  Opcion: " OPT
+        case $OPT in
+            1) crear_user_ziv ;;
+            2) listar_users_ziv ;;
+            3) eliminar_user_ziv ;;
+            4) limpiar_expirados_ziv; aplicar_passwords_ziv; echo -e "  ${G}Limpiado${NC}"; sleep 1 ;;
+            0) break ;;
+        esac
+    done
+}
