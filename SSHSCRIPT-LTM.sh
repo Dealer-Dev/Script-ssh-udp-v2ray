@@ -314,7 +314,7 @@ menu_ws() {
         echo -e "  ${Y}  WEBSOCKET PYTHON${NC}"
         sep
         echo ""
-        for f in $DIR_SERVICES/ws-proxy-*.service 2>/dev/null; do
+        for f in $DIR_SERVICES/ws-proxy-*.service; do
             [ -f "$f" ] || continue
             name=$(basename $f .service)
             port=$(echo $name | grep -o '[0-9]*$')
