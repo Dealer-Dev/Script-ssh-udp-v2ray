@@ -38,7 +38,6 @@ if [ -f /etc/sshfreeltm/.licensed ]; then
         exit 1
 fi
 
-fi  # ← ESTE ES EL QUE FALTA
 
 # ══════════════════════════════════════════
 # VERIFICACION DE LICENCIA
