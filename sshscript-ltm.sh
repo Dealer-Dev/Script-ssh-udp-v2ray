@@ -22,26 +22,16 @@ LINE2='◇───────────────────────�
 DIR_SCRIPTS="/etc/sshfreeltm"
 DIR_SERVICES="/etc/systemd/system"
 mkdir -p $DIR_SCRIPTS
+# ══════════════════════════════════════════
+# VERIFICAR SI YA ESTÁ ACTIVADO
+# ══════════════════════════════════════════
 if [ -f /etc/sshfreeltm/.licensed ]; then
-    SAVED_KEY=$(cat /etc/sshfreeltm/.licensed)
-
-    API_URL="https://dealerbotgenkeys.mcmilton235.workers.dev/validate"
-    RESPONSE=$(curl -s --max-time 10 "$API_URL?key=$SAVED_KEY")
-
-    VALID=$(echo "$RESPONSE" | grep -o '"valid":true')
-
-    if [[ "$VALID" != '"valid":true' ]]; then
-        echo "Licencia invalida o expirada"
-        rm -f /etc/sshfreeltm/.licensed
-        exit 1
-    fi
-fi
+    echo "✔ Sistema ya activado"
+else
 
 
 # ══════════════════════════════════════════
-
 # VERIFICACION DE LICENCIA
-
 # ══════════════════════════════════════════
 
 if [ ! -f /etc/sshfreeltm/.licensed ]; then
