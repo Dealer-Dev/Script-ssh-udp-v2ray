@@ -32,10 +32,14 @@ if [ -f /etc/sshfreeltm/.licensed ]; then
 
     VALID=$(echo $CHECK | python3 -c "import sys,json; print(json.load(sys.stdin).get('valid', False))")
 
+    if [ -f /etc/sshfreeltm/.licensed ]; then
+
     if [[ "$VALID" != "True" && "$VALID" != "true" ]]; then
         echo "Licencia invalida o expirada"
         rm -f /etc/sshfreeltm/.licensed
         exit 1
+    fi
+
 fi
 
 
