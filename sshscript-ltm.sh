@@ -39,58 +39,65 @@ fi
 
 
 # ══════════════════════════════════════════
+
 # VERIFICACION DE LICENCIA
+
 # ══════════════════════════════════════════
+
 if [ ! -f /etc/sshfreeltm/.licensed ]; then
-    clear
-    echo -e "\033[1;96m"
-    figlet -f small "LTM VPN TOOLS" 2>/dev/null || echo "LTM VPN TOOLS"
-    echo -e "\033[0m"
-    echo -e "\033[1;96m◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\033[0m"
-    echo -e "  \033[1;97m⚡ SCRIPT DEALER v2.5 by @DealerServices235\033[0m"
-    echo -e "\033[1;96m◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\033[0m"
-    echo ""
-    echo -e "  \033[1;33m🔐 Se requiere una KEY de licencia para instalar\033[0m"
-    echo -e "  \033[2;37m   Obtén tu KEY con @DealerServices235\033[0m"
-    echo ""
-    echo -e "\033[1;96m◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\033[0m"
+clear
+echo -e "\033[1;96m"
+figlet -f small "LTM VPN TOOLS" 2>/dev/null || echo "LTM VPN TOOLS"
+echo -e "\033[0m"
+echo -e "\033[1;96m◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\033[0m"
+echo -e "  \033[1;97m⚡ SCRIPT DEALER v2.5 by @DealerServices235\033[0m"
+echo -e "\033[1;96m◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\033[0m"
+echo ""
+echo -e "  \033[1;33m🔐 Se requiere una KEY de licencia para instalar\033[0m"
+echo -e "  \033[2;37m   Obtén tu KEY con @DealerServices235\033[0m"
+echo ""
+echo -e "\033[1;96m◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\033[0m"
 
-    read -p "  🗝️  Ingresa tu KEY: " INPUT_KEY
-    echo ""
+```
+read -p "  🗝️  Ingresa tu KEY: " INPUT_KEY
+echo ""
 
-    command -v curl > /dev/null 2>&1 || apt install -y curl > /dev/null 2>&1
+# Asegurar curl
+command -v curl > /dev/null 2>&1 || apt install -y curl > /dev/null 2>&1
 
-    echo -e "  \033[0;36m⏳  Verificando key...\033[0m"
+echo -e "  \033[0;36m⏳  Verificando key...\033[0m"
 
-    API_URL="https://dealerbotgenkeys.mcmilton235.workers.dev/validate"
-    RESPONSE=$(curl -s --max-time 10 "$API_URL?key=$INPUT_KEY")
+API_URL="https://dealerbotgenkeys.mcmilton235.workers.dev/validate"
+RESPONSE=$(curl -s --max-time 10 "$API_URL?key=$INPUT_KEY")
 
-    echo "Respuesta API: $RESPONSE"
+# DEBUG (puedes eliminar luego)
+echo "Respuesta API: $RESPONSE"
 
-    VALID=$(echo "$RESPONSE" | grep -o '"valid":true')
+VALID=$(echo "$RESPONSE" | grep -o '"valid":true')
 
-    if [[ "$VALID" == '"valid":true' ]]; then
-        mkdir -p /etc/sshfreeltm
-        echo "$INPUT_KEY" > /etc/sshfreeltm/.licensed
-        echo -e "  \033[0;32m✅ Key valida — Bienvenido al SCRIPT DEALER\033[0m"
-        sleep 2
+if [[ "$VALID" == '"valid":true' ]]; then
+    mkdir -p /etc/sshfreeltm
+    echo "$INPUT_KEY" > /etc/sshfreeltm/.licensed
+    echo -e "  \033[0;32m✅ Key valida — Bienvenido al SCRIPT DEALER\033[0m"
+    sleep 2
+else
+    if echo "$RESPONSE" | grep -q '"expired"'; then
+        MSG="⏰ Key expirada"
+    elif echo "$RESPONSE" | grep -q '"used"'; then
+        MSG="⚠️ Key ya usada"
+    elif echo "$RESPONSE" | grep -q '"not_found"'; then
+        MSG="❌ Key no existe"
     else
-        if echo "$RESPONSE" | grep -q '"expired"'; then
-            MSG="⏰ Key expirada"
-        elif echo "$RESPONSE" | grep -q '"used"'; then
-            MSG="⚠️ Key ya usada"
-        elif echo "$RESPONSE" | grep -q '"not_found"'; then
-            MSG="❌ Key no existe"
-        else
-            MSG="❌ Error desconocido (API o conexión)"
-        fi
-
-        echo -e "  \033[0;31m$MSG\033[0m"
-        echo -e "  \033[2;37m   Obtén tu KEY con @DealerServices235\033[0m"
-        sleep 3
-        exit 1
+        MSG="❌ Error desconocido (API o conexión)"
     fi
+
+    echo -e "  \033[0;31m$MSG\033[0m"
+    echo -e "  \033[2;37m   Obtén tu KEY con @DealerServices235\033[0m"
+    sleep 3
+    exit 1
 fi
+```
+
 fi
 
 # Deshabilitar mensajes de bienvenida de Ubuntu
