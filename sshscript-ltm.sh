@@ -47,7 +47,7 @@ if [ ! -f /etc/sshfreeltm/.licensed ]; then
     figlet -f small "LTM VPN TOOLS" 2>/dev/null || echo "LTM VPN TOOLS"
     echo -e "\033[0m"
     echo -e "\033[1;96m◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\033[0m"
-    echo -e "  \033[1;97m⚡ LTM VPN TOOLS v2.5 by @DealerServices235\033[0m"
+    echo -e "  \033[1;97m⚡ XXXXXXXXXX v2.5 by @DealerServices235\033[0m"
     echo -e "\033[1;96m◆━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◆\033[0m"
     echo ""
     echo -e "  \033[1;33m🔐 Se requiere una KEY de licencia para instalar\033[0m"
