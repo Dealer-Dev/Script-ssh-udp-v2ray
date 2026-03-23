@@ -54,7 +54,7 @@ if [ ! -f /etc/sshfreeltm/.licensed ]; then
     if [ "$IS_OK" = "True" ]; then
         mkdir -p /etc/sshfreeltm
         echo "$INPUT_KEY" > /etc/sshfreeltm/.licensed
-        echo -e "  \033[0;32m✅ Key valida — Bienvenido a LTM VPN TOOLS\033[0m"
+        echo -e "  \033[0;32m✅ Key valida — Disfruta el SCRIPT DEALER\033[0m"
         sleep 2
     else
         echo -e "  \033[0;31m❌ $ERROR_MSG\033[0m"
@@ -108,9 +108,9 @@ if [ ! -f /etc/sshfreeltm/server_name ]; then
     mkdir -p /etc/sshfreeltm
     apt install -y figlet > /dev/null 2>&1
     echo ""
-    echo -e "\033[1;33mEscribe el nombre que aparecera en el menu:\033[0m"
+    echo -e "\033[1;33mEscribe el nombre del servidor:\033[0m"
     read -p "Nombre: " INSTALL_NAME
-    INSTALL_NAME=${INSTALL_NAME:-"SSHFREE LTM"}
+    INSTALL_NAME=${INSTALL_NAME:-"Dealer"}
     echo "$INSTALL_NAME" > /etc/sshfreeltm/server_name
     echo "$(date +%d-%m-%Y)" > /etc/sshfreeltm/install_date
 fi
@@ -120,9 +120,9 @@ if [ ! -f /etc/sshfreeltm/server_name ]; then
     mkdir -p /etc/sshfreeltm
     apt install -y figlet > /dev/null 2>&1
     echo ""
-    echo -e "\033[1;33mEscribe el nombre que aparecera en el menu:\033[0m"
+    echo -e "\033[1;33mEscribe el nombre del servidor:\033[0m"
     read -p "Nombre: " INSTALL_NAME
-    INSTALL_NAME=${INSTALL_NAME:-"SSHFREE LTM"}
+    INSTALL_NAME=${INSTALL_NAME:-"Dealer"}
     echo "$INSTALL_NAME" > /etc/sshfreeltm/server_name
     echo "$(date +%d-%m-%Y)" > /etc/sshfreeltm/install_date
 fi
