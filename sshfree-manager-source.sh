@@ -44,23 +44,40 @@ if [ ! -f /etc/sshfreeltm/.licensed ]; then
     command -v curl > /dev/null 2>&1 || apt install -y curl > /dev/null 2>&1
     echo -e "  \033[0;36m⏳  Verificando key...\033[0m"
 
-    # Verificar key contra API
-    VERIFY_RESULT=$(curl -s -X POST http://165.245.164.107:6000/api/key/verify         -H "Content-Type: application/json"         -d "{\"key\": \"$INPUT_KEY\"}" 2>/dev/null)
+    # Verificar key contra TU Worker
+API_URL="https://dealerbotgenkeys.mcmilton235.workers.dev/validate"
 
-    IS_OK=$(echo $VERIFY_RESULT | python3 -c "import sys,json; print(json.load(sys.stdin).get('ok','false'))" 2>/dev/null)
-    ERROR_MSG=$(echo $VERIFY_RESULT | python3 -c "import sys,json; print(json.load(sys.stdin).get('error','Error desconocido'))" 2>/dev/null)
+RESPONSE=$(curl -s --max-time 10 "$API_URL?key=$INPUT_KEY")
 
-    if [ "$IS_OK" = "True" ]; then
-        mkdir -p /etc/sshfreeltm
-        echo "$INPUT_KEY" > /etc/sshfreeltm/.licensed
-        echo -e "  \033[0;32m✅ Key valida — Bienvenido a LTM VPN TOOLS\033[0m"
-        sleep 2
-    else
-        echo -e "  \033[0;31m❌ $ERROR_MSG\033[0m"
-        echo -e "  \033[2;37m   Obtén tu KEY con @DarkZFull\033[0m"
-        sleep 3
-        exit 1
-    fi
+VALID=$(echo "$RESPONSE" | grep -o '"valid":[^,]*' | cut -d':' -f2)
+
+if [[ "$VALID" == "true" ]]; then
+    mkdir -p /etc/sshfreeltm
+    echo "$INPUT_KEY" > /etc/sshfreeltm/.licensed
+    echo -e "  \033[0;32m✅ Key valida — Bienvenido a SCRIPT DEALER\033[0m"
+    sleep 2
+else
+    REASON=$(echo "$RESPONSE" | grep -o '"reason":"[^"]*"' | cut -d'"' -f4)
+
+    case "$REASON" in
+        "expired")
+            MSG="⏰ Key expirada"
+            ;;
+        "used")
+            MSG="⚠️ Key ya usada"
+            ;;
+        "not_found")
+            MSG="❌ Key no existe"
+            ;;
+        *)
+            MSG="❌ Key inválida"
+            ;;
+    esac
+
+    echo -e "  \033[0;31m$MSG\033[0m"
+    echo -e "  \033[2;37m   Obtén tu KEY con @DealerServices235\033[0m"
+    sleep 3
+    exit 1
 fi
 
 
