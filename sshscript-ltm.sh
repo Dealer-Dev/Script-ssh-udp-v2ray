@@ -95,7 +95,7 @@ else
     sleep 3
     exit 1
 fi
-
+fi
 
 
 # Deshabilitar mensajes de bienvenida de Ubuntu
