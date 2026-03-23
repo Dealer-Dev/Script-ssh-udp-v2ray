@@ -22,7 +22,22 @@ LINE2='◇───────────────────────�
 DIR_SCRIPTS="/etc/sshfreeltm"
 DIR_SERVICES="/etc/systemd/system"
 mkdir -p $DIR_SCRIPTS
+if [ -f /etc/sshfreeltm/.licensed ]; then
+    SAVED_KEY=$(cat /etc/sshfreeltm/.licensed)
 
+    API_URL="https://dealerbotgenkeys.mcmilton235.workers.dev/validate"
+    CHECK=$(curl -s -X POST $API_URL \
+    -H "Content-Type: application/json" \
+    -d "{\"key\":\"$SAVED_KEY\"}")
+
+    VALID=$(echo $CHECK | python3 -c "import sys,json; print(json.load(sys.stdin).get('valid', False))")
+
+    if [[ "$VALID" != "True" && "$VALID" != "true" ]]; then
+        echo "Licencia invalida o expirada"
+        rm -f /etc/sshfreeltm/.licensed
+        exit 1
+    fi
+fi
 # ══════════════════════════════════════════
 # VERIFICACION DE LICENCIA
 # ══════════════════════════════════════════
@@ -46,12 +61,15 @@ if [ ! -f /etc/sshfreeltm/.licensed ]; then
 
     VPS_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
     VPS_OS=$(lsb_release -d 2>/dev/null | cut -f2 || echo "Ubuntu")
-    VERIFY_RESULT=$(curl -s -X POST http://165.245.164.107:6000/api/key/verify -H "Content-Type: application/json" -d "{\"key\": \"$INPUT_KEY\", \"ip\": \"$VPS_IP\", \"os\": \"$VPS_OS\"}" 2>/dev/null)
+    API_URL="https://dealerbotgenkeys.mcmilton235.workers.dev/validate"
 
-    IS_OK=$(echo $VERIFY_RESULT | python3 -c "import sys,json; print(json.load(sys.stdin).get('ok','false'))" 2>/dev/null)
+VERIFY_RESULT=$(curl -s -X POST $API_URL \
+-H "Content-Type: application/json" \
+-d "{\"key\": \"$INPUT_KEY\"}")
+    ERROR_MSG=$(echo $VERIFY_RESULT | python3 -c "import sys,json; print(json.load(sys.stdin).get('error','Key invalida'))")
     ERROR_MSG=$(echo $VERIFY_RESULT | python3 -c "import sys,json; print(json.load(sys.stdin).get('error','Error desconocido'))" 2>/dev/null)
 
-    if [ "$IS_OK" = "True" ]; then
+    if [[ "$IS_OK" == "True" || "$IS_OK" == "true" ]]; then
         mkdir -p /etc/sshfreeltm
         echo "$INPUT_KEY" > /etc/sshfreeltm/.licensed
         echo -e "  \033[0;32m✅ Key valida — Disfruta el SCRIPT DEALER\033[0m"
