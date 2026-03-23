@@ -36,9 +36,10 @@ if [ -f /etc/sshfreeltm/.licensed ]; then
         echo "Licencia invalida o expirada"
         rm -f /etc/sshfreeltm/.licensed
         exit 1
-    fi
 fi
-fi
+
+fi  # ← ESTE ES EL QUE FALTA
+
 # ══════════════════════════════════════════
 # VERIFICACION DE LICENCIA
 # ══════════════════════════════════════════
