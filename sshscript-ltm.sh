@@ -41,7 +41,7 @@ fi
 # ══════════════════════════════════════════
 # VERIFICACION DE LICENCIA
 # ══════════════════════════════════════════
-if if [ ! -f /etc/sshfreeltm/.licensed ]; then
+if [ ! -f /etc/sshfreeltm/.licensed ]; then
     clear
     echo -e "\033[1;96m"
     figlet -f small "LTM VPN TOOLS" 2>/dev/null || echo "LTM VPN TOOLS"
