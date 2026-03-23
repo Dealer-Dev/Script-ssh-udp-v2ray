@@ -2306,5 +2306,3 @@ menu_principal
 wget -q -O /usr/local/bin/menu "https://raw.githubusercontent.com/Dealer-Dev/Script-ssh-udp-v2ray/main/sshscript-ltm.sh"
 chmod +x /usr/local/bin/menu
 echo -e "\033[0;32mComando menu instalado\033[0m"
-
-
