@@ -63,23 +63,35 @@ if [ ! -f /etc/sshfreeltm/.licensed ]; then
     VPS_OS=$(lsb_release -d 2>/dev/null | cut -f2 || echo "Ubuntu")
     API_URL="https://dealerbotgenkeys.mcmilton235.workers.dev/validate"
 
-VERIFY_RESULT=$(curl -s -X POST $API_URL \
--H "Content-Type: application/json" \
--d "{\"key\": \"$INPUT_KEY\"}")
-    ERROR_MSG=$(echo $VERIFY_RESULT | python3 -c "import sys,json; print(json.load(sys.stdin).get('error','Key invalida'))")
-    ERROR_MSG=$(echo $VERIFY_RESULT | python3 -c "import sys,json; print(json.load(sys.stdin).get('error','Error desconocido'))" 2>/dev/null)
+API_URL="https://dealerbotgenkeys.mcmilton235.workers.dev/validate"
 
-    if [[ "$IS_OK" == "True" || "$IS_OK" == "true" ]]; then
-        mkdir -p /etc/sshfreeltm
-        echo "$INPUT_KEY" > /etc/sshfreeltm/.licensed
-        echo -e "  \033[0;32m✅ Key valida — Disfruta el SCRIPT DEALER\033[0m"
-        sleep 2
+RESPONSE=$(curl -s --max-time 10 "$API_URL?key=$INPUT_KEY")
+
+# DEBUG (puedes borrar luego)
+echo "Respuesta API: $RESPONSE"
+
+VALID=$(echo "$RESPONSE" | grep -o '"valid":true')
+
+if [[ "$VALID" == '"valid":true' ]]; then
+    mkdir -p /etc/sshfreeltm
+    echo "$INPUT_KEY" > /etc/sshfreeltm/.licensed
+    echo -e "  \033[0;32m✅ Key valida — Disfruta el SCRIPT DEALER\033[0m"
+    sleep 2
+else
+    if echo "$RESPONSE" | grep -q '"expired"'; then
+        MSG="⏰ Key expirada"
+    elif echo "$RESPONSE" | grep -q '"used"'; then
+        MSG="⚠️ Key ya usada"
+    elif echo "$RESPONSE" | grep -q '"not_found"'; then
+        MSG="❌ Key no existe"
     else
-        echo -e "  \033[0;31m❌ $ERROR_MSG\033[0m"
-        echo -e "  \033[2;37m   Obtén tu KEY con @DealerServices235\033[0m"
-        sleep 3
-        exit 1
+        MSG="❌ Error desconocido (revisa conexión o API)"
     fi
+
+    echo -e "  \033[0;31m$MSG\033[0m"
+    echo -e "  \033[2;37m   Obtén tu KEY con @DealerServices235\033[0m"
+    sleep 3
+    exit 1
 fi
 
 
